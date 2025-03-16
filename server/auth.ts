@@ -9,7 +9,7 @@ import { User, InsertUser } from "@shared/schema";
 
 const scryptAsync = promisify(scrypt);
 
-async function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
@@ -27,6 +27,7 @@ export function setupAuth(app: Express) {
     secret: process.env.SESSION_SECRET || "super-secret-keyboard-cat",
     resave: false,
     saveUninitialized: false,
+    store: storage.sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === "production",
       maxAge: 1000 * 60 * 60 * 24, // 1 day

@@ -43,13 +43,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes and middleware
   setupAuth(app);
   
+  // Import the hashPassword function from auth.ts
+  const { hashPassword } = await import('./auth');
+  
   // Create default admin user if it doesn't exist
   const adminUser = await storage.getUserByUsername('admin');
   if (!adminUser) {
-    // Use our hash password function from auth.ts
+    // Create admin user with hashed password
     await storage.createUser({
       username: 'admin',
-      password: 'admin',
+      password: await hashPassword('admin'),
       name: 'Administrator',
       role: 'admin'
     });
