@@ -1,18 +1,27 @@
-import { useState } from 'react';
 import AppHeader from '@/components/AppHeader';
 import KanbanBoard from '@/components/KanbanBoard';
 import { useDealboard } from '@/hooks/useDealboard';
-import { AlertCircle, RefreshCcw } from 'lucide-react';
+import { AlertCircle, FilterIcon, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Home() {
   const {
     deals,
     stages,
+    pipelines,
+    selectedPipelineId,
     isLoading,
     isError,
     error,
     handleSearch,
+    handlePipelineChange,
     refreshData,
     lastUpdated
   } = useDealboard();
@@ -52,10 +61,44 @@ export default function Home() {
     );
   }
 
+  // Find the currently selected pipeline name
+  const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
+
   // Return main UI
   return (
     <div className="text-neutral-400 h-screen flex flex-col overflow-hidden">
       <AppHeader onSearch={handleSearch} />
+      
+      {/* Pipeline selector */}
+      <div className="bg-white border-b border-neutral-200 px-6 py-2 flex items-center">
+        <div className="flex items-center mr-8">
+          <span className="text-neutral-400 text-sm mr-3">Pipeline:</span>
+          <Select 
+            value={selectedPipelineId || ''} 
+            onValueChange={handlePipelineChange}
+          >
+            <SelectTrigger className="w-[250px] border-neutral-200 bg-white">
+              <SelectValue placeholder="Select a pipeline" />
+            </SelectTrigger>
+            <SelectContent>
+              {pipelines.map(pipeline => (
+                <SelectItem key={pipeline.id} value={pipeline.id}>
+                  {pipeline.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Display total deal count for selected pipeline */}
+        <div className="flex items-center text-sm text-neutral-400">
+          <FilterIcon className="h-4 w-4 mr-2" />
+          <span>
+            {deals?.length || 0} deal{deals?.length !== 1 ? 's' : ''} in {selectedPipeline?.name || 'pipeline'}
+          </span>
+        </div>
+      </div>
+      
       <KanbanBoard 
         deals={deals || []} 
         stages={stages || []} 

@@ -8,6 +8,7 @@ export function useDealboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredDeals, setFilteredDeals] = useState<Deal[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   
   // Fetch deals
   const { 
@@ -31,41 +32,60 @@ export function useDealboard() {
     queryKey: ['/api/pipelines'],
   });
   
+  // Set default selected pipeline if not set and pipelines are loaded
+  useEffect(() => {
+    if (pipelineData?.pipelines && pipelineData.pipelines.length > 0 && !selectedPipelineId) {
+      setSelectedPipelineId(pipelineData.pipelines[0].id);
+    }
+  }, [pipelineData, selectedPipelineId]);
+  
   // Combined loading state
   const isLoading = isLoadingDeals || isLoadingPipelines;
   const isError = isErrorDeals || isErrorPipelines;
   const error = dealsError || pipelinesError;
   
-  // Filter deals based on search query
+  // Filter deals based on search query and selected pipeline
   useEffect(() => {
     if (!deals) {
       setFilteredDeals([]);
       return;
     }
     
+    // Initial filtering by pipeline
+    let pipelineFiltered = deals;
+    if (selectedPipelineId) {
+      pipelineFiltered = deals.filter(deal => deal.pipelineId === selectedPipelineId);
+    }
+    
+    // Then apply search filter if exists
     if (!searchQuery) {
-      setFilteredDeals(deals);
+      setFilteredDeals(pipelineFiltered);
       return;
     }
     
     const lowercaseQuery = searchQuery.toLowerCase();
-    const filtered = deals.filter(deal => 
+    const filtered = pipelineFiltered.filter(deal => 
       deal.name.toLowerCase().includes(lowercaseQuery) ||
       (deal.company && deal.company.toLowerCase().includes(lowercaseQuery)) ||
       (deal.contact && deal.contact.toLowerCase().includes(lowercaseQuery))
     );
     
     setFilteredDeals(filtered);
-  }, [deals, searchQuery]);
+  }, [deals, searchQuery, selectedPipelineId]);
   
-  // Sort stages by display order
-  const stages = pipelineData?.stages.slice().sort((a, b) => 
-    (a.displayOrder || 0) - (b.displayOrder || 0)
-  ) || [];
+  // Get stages for the selected pipeline
+  const filteredStages = pipelineData?.stages.filter(stage => 
+    stage.pipelineId === selectedPipelineId
+  ).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)) || [];
   
   // Handle search input changes
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
+  }, []);
+  
+  // Handle pipeline selection
+  const handlePipelineChange = useCallback((pipelineId: string) => {
+    setSelectedPipelineId(pipelineId);
   }, []);
   
   // Refresh data
@@ -91,12 +111,14 @@ export function useDealboard() {
   
   return {
     deals: filteredDeals,
-    stages,
+    stages: filteredStages,
     pipelines: pipelineData?.pipelines || [],
+    selectedPipelineId,
     isLoading,
     isError,
     error,
     handleSearch,
+    handlePipelineChange,
     refreshData,
     lastUpdated
   };
