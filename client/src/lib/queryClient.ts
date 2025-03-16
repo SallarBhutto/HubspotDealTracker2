@@ -1,9 +1,19 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { api } from "./api";
+import { AxiosError } from "axios";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+// Helper function to handle errors from the API
+async function handleApiError(error: any) {
+  if (error.response) {
+    // The request was made and the server responded with a non-2xx status code
+    const message = error.response.data || error.response.statusText;
+    throw new Error(`${error.response.status}: ${message}`);
+  } else if (error.request) {
+    // The request was made but no response was received
+    throw new Error("Network error: No response received");
+  } else {
+    // Something happened in setting up the request
+    throw new Error(`Error: ${error.message}`);
   }
 }
 
@@ -11,16 +21,19 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await throwIfResNotOk(res);
-  return res;
+): Promise<any> {
+  try {
+    const response = await api.request({
+      method,
+      url,
+      data: data,
+    });
+    
+    return response;
+  } catch (error) {
+    await handleApiError(error);
+    return null; // Will never reach here because handleApiError throws an error
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -29,16 +42,22 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    try {
+      const response = await api.get(queryKey[0] as string);
+      return response.data as T;
+    } catch (error) {
+      if ((error as AxiosError).isAxiosError) {
+        const axiosError = error as AxiosError;
+        if (axiosError.response?.status === 401) {
+          if (unauthorizedBehavior === "returnNull") {
+            return null as T;
+          }
+        }
+      }
+      
+      await handleApiError(error);
+      return null; // Will never reach here because handleApiError throws an error
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

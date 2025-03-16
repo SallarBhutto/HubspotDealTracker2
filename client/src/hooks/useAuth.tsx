@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useContext, useState, useEffect } from 'react';
 import { queryClient } from '@/lib/queryClient';
 import { User } from '@shared/schema';
-import axios from 'axios';
+import { api } from '@/lib/api';
 import { useToast } from './use-toast';
 
 interface AuthContextType {
@@ -29,11 +29,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const fetchCurrentUser = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get<User>('/api/user');
+        const response = await api.get<User>('/api/user');
         setUser(response.data);
       } catch (err) {
         // If the error is 401, the user is not authenticated
-        if (axios.isAxiosError(err) && err.response?.status === 401) {
+        if (err.response?.status === 401) {
           setUser(null);
           return;
         }
@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.post<User>('/api/login', {
+      const response = await api.post<User>('/api/login', {
         username,
         password,
       });
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
     } catch (err) {
       let errorMessage = 'Failed to login';
-      if (axios.isAxiosError(err) && err.response) {
+      if (err.response) {
         errorMessage = err.response.data || errorMessage;
       }
       
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = async () => {
     try {
       setIsLoading(true);
-      await axios.post('/api/logout');
+      await api.post('/api/logout');
       setUser(null);
       // Clear query cache on logout to avoid showing stale data
       queryClient.clear();
