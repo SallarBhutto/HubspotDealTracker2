@@ -3,14 +3,13 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import axios from "axios";
 import { Deal, Pipeline, Stage, insertUserSchema } from "@shared/schema";
+import { setupAuth } from "./auth";
 
-// Define authentication middleware
+// Define authentication middleware for API routes
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  // Check if user is authenticated via session
-  if (req.session && req.session.user) {
+  if (req.isAuthenticated()) {
     return next();
   }
-  
   return res.status(401).json({ error: 'Authentication required' });
 };
 
@@ -41,86 +40,21 @@ interface HubSpotErrorResponse {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication routes and middleware
+  setupAuth(app);
+  
   // Create default admin user if it doesn't exist
   const adminUser = await storage.getUserByUsername('admin');
   if (!adminUser) {
+    // Use our hash password function from auth.ts
     await storage.createUser({
       username: 'admin',
-      password: 'admin', // In a real app, this would be hashed
+      password: 'admin',
       name: 'Administrator',
       role: 'admin'
     });
     console.log('Created default admin user');
   }
-
-  // Authentication routes
-  app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
-    
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password are required' });
-    }
-    
-    try {
-      // Get user by username
-      const user = await storage.getUserByUsername(username);
-      
-      // Check if user exists and password matches
-      if (!user || user.password !== password) {
-        return res.status(401).json({ message: 'Invalid username or password' });
-      }
-      
-      // Set user in session
-      if (req.session) {
-        req.session.user = {
-          id: user.id,
-          username: user.username,
-          name: user.name,
-          role: user.role
-        };
-      }
-      
-      // Return user info without password
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ message: 'An error occurred during login' });
-    }
-  });
-  
-  app.post('/api/logout', (req, res) => {
-    if (req.session) {
-      req.session.destroy(err => {
-        if (err) {
-          return res.status(500).json({ message: 'Failed to logout' });
-        }
-        res.json({ message: 'Logged out successfully' });
-      });
-    } else {
-      res.json({ message: 'Not logged in' });
-    }
-  });
-  
-  app.get('/api/me', isAuthenticated, async (req, res) => {
-    if (!req.session || !req.session.user) {
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-    
-    try {
-      const user = await storage.getUser(req.session.user.id);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      // Return user info without password
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      console.error('Get user error:', error);
-      res.status(500).json({ message: 'An error occurred while fetching user data' });
-    }
-  });
 
   // Helper to format HubSpot errors
   const handleHubSpotError = (error: any) => {
@@ -138,8 +72,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   };
 
-  // API routes
-  app.get('/api/deals', async (req, res) => {
+  // API routes - protected by authentication
+  app.get('/api/deals', isAuthenticated, async (req, res) => {
     try {
       const response = await hubspotAPI.get('/crm/v3/objects/deals', {
         params: {
@@ -174,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/pipelines', async (req, res) => {
+  app.get('/api/pipelines', isAuthenticated, async (req, res) => {
     try {
       const response = await hubspotAPI.get('/crm/v3/pipelines/deals');
       
@@ -234,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/deals/:id/stage', async (req, res) => {
+  app.patch('/api/deals/:id/stage', isAuthenticated, async (req, res) => {
     const { id } = req.params;
     const { stageId } = req.body;
     
