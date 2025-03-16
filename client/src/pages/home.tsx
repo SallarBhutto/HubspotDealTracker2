@@ -1,15 +1,25 @@
 import AppHeader from '@/components/AppHeader';
 import KanbanBoard from '@/components/KanbanBoard';
 import { useDealboard } from '@/hooks/useDealboard';
-import { AlertCircle, FilterIcon, RefreshCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  CircularProgress, 
+  Select, 
+  MenuItem, 
+  FormControl, 
+  InputLabel,
+  Stack,
+  Paper,
+  Container,
+  Divider
+} from '@mui/material';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  ErrorOutlineRounded,
+  RefreshRounded,
+  FilterListRounded
+} from '@mui/icons-material';
 
 export default function Home() {
   const {
@@ -29,35 +39,42 @@ export default function Home() {
   // Return loading state
   if (isLoading && !deals?.length && !stages?.length) {
     return (
-      <div className="text-neutral-400 h-screen flex flex-col overflow-hidden">
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: 'text.secondary' }}>
         <AppHeader onSearch={handleSearch} />
-        <div className="flex flex-col items-center justify-center flex-grow">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="mt-4 text-neutral-400">Loading deals...</p>
-        </div>
-      </div>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexGrow: 1 }}>
+          <CircularProgress size={48} sx={{ color: 'primary.main' }} />
+          <Typography sx={{ mt: 2, color: 'text.secondary' }}>
+            Loading deals...
+          </Typography>
+        </Box>
+      </Box>
     );
   }
 
   // Return error state
   if (isError) {
     return (
-      <div className="text-neutral-400 h-screen flex flex-col overflow-hidden">
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: 'text.secondary' }}>
         <AppHeader onSearch={handleSearch} />
-        <div className="flex flex-col items-center justify-center flex-grow">
-          <AlertCircle className="h-12 w-12 text-status-error" />
-          <p className="mt-4 text-neutral-400 font-medium">Failed to load deals</p>
-          <p className="text-neutral-300 mt-2">
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexGrow: 1 }}>
+          <ErrorOutlineRounded sx={{ fontSize: 48, color: 'error.main', mb: 1 }} />
+          <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary', fontWeight: 500 }}>
+            Failed to load deals
+          </Typography>
+          <Typography sx={{ mt: 1, color: 'text.disabled' }}>
             {error instanceof Error ? error.message : "Please check your connection and try again"}
-          </p>
+          </Typography>
           <Button 
-            className="mt-4 bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded"
+            variant="contained"
+            color="primary"
+            startIcon={<RefreshRounded />} 
             onClick={refreshData}
+            sx={{ mt: 3 }}
           >
-            <RefreshCcw className="h-4 w-4 mr-2" /> Retry
+            Retry
           </Button>
-        </div>
-      </div>
+        </Box>
+      </Box>
     );
   }
 
@@ -66,38 +83,58 @@ export default function Home() {
 
   // Return main UI
   return (
-    <div className="text-neutral-400 h-screen flex flex-col overflow-hidden">
+    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: 'text.secondary' }}>
       <AppHeader onSearch={handleSearch} />
       
       {/* Pipeline selector */}
-      <div className="bg-white border-b border-neutral-200 px-6 py-2 flex items-center">
-        <div className="flex items-center mr-8">
-          <span className="text-neutral-400 text-sm mr-3">Pipeline:</span>
-          <Select 
-            value={selectedPipelineId || ''} 
-            onValueChange={handlePipelineChange}
-          >
-            <SelectTrigger className="w-[250px] border-neutral-200 bg-white">
-              <SelectValue placeholder="Select a pipeline" />
-            </SelectTrigger>
-            <SelectContent>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          bgcolor: 'white', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider',
+          px: 3, 
+          py: 1.5, 
+          display: 'flex', 
+          alignItems: 'center' 
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', mr: 4 }}>
+          <Typography variant="body2" sx={{ mr: 2, color: 'text.secondary' }}>
+            Pipeline:
+          </Typography>
+          <FormControl size="small" sx={{ minWidth: 250 }}>
+            <Select
+              value={selectedPipelineId || ''}
+              onChange={(e) => handlePipelineChange(e.target.value as string)}
+              displayEmpty
+              sx={{ 
+                bgcolor: 'white',
+                '.MuiOutlinedInput-notchedOutline': { 
+                  borderColor: 'divider'
+                }
+              }}
+            >
+              <MenuItem disabled value="">
+                <Typography variant="body2">Select a pipeline</Typography>
+              </MenuItem>
               {pipelines.map(pipeline => (
-                <SelectItem key={pipeline.id} value={pipeline.id}>
-                  {pipeline.name}
-                </SelectItem>
+                <MenuItem key={pipeline.id} value={pipeline.id}>
+                  <Typography variant="body2">{pipeline.name}</Typography>
+                </MenuItem>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
+            </Select>
+          </FormControl>
+        </Box>
         
         {/* Display total deal count for selected pipeline */}
-        <div className="flex items-center text-sm text-neutral-400">
-          <FilterIcon className="h-4 w-4 mr-2" />
-          <span>
+        <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
+          <FilterListRounded sx={{ fontSize: 16, mr: 1 }} />
+          <Typography variant="body2">
             {deals?.length || 0} deal{deals?.length !== 1 ? 's' : ''} in {selectedPipeline?.name || 'pipeline'}
-          </span>
-        </div>
-      </div>
+          </Typography>
+        </Box>
+      </Paper>
       
       <KanbanBoard 
         deals={deals || []} 
@@ -106,6 +143,6 @@ export default function Home() {
         onRefresh={refreshData}
         lastUpdated={lastUpdated}
       />
-    </div>
+    </Box>
   );
 }

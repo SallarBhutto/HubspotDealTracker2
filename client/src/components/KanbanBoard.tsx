@@ -2,9 +2,19 @@ import { useState, useEffect } from 'react';
 import { useDrop } from 'react-dnd';
 import { Deal, Stage } from '@shared/schema';
 import DealCard from './DealCard';
-import { RefreshCcwIcon, InboxIcon, PlusIcon, MoreHorizontalIcon } from 'lucide-react';
+import { RefreshRounded, InboxRounded, AddRounded, MoreHorizRounded } from '@mui/icons-material';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Chip, 
+  IconButton, 
+  Paper, 
+  Stack,
+  CircularProgress
+} from '@mui/material';
 
 interface KanbanBoardProps {
   deals: Deal[];
@@ -112,70 +122,150 @@ export default function KanbanBoard({
     }));
     
     return (
-      <div className={`board-column flex flex-col mx-2 first:ml-6 last:mr-6 w-72 min-w-72 
-                      bg-neutral-100 rounded-t overflow-hidden 
-                      ${isOver ? 'ring-2 ring-primary ring-inset' : ''}`}>
-        <div className="px-4 py-3 bg-white border-b border-neutral-200 flex items-center justify-between">
-          <div className="flex items-center">
-            <h3 className="font-medium text-sm">{stage.label}</h3>
-            <span className="ml-2 bg-neutral-200 text-neutral-400 text-xs px-2 py-0.5 rounded-full">
-              {stageDeals.length}
-            </span>
-          </div>
-          <div className="flex items-center">
-            <MoreHorizontalIcon className="text-neutral-300 h-4 w-4" />
-          </div>
-        </div>
-        <div ref={drop} className="flex-grow overflow-y-auto p-2 space-y-2">
+      <Paper 
+        elevation={0}
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          mx: 1, 
+          '&:first-of-type': { ml: 3 },
+          '&:last-of-type': { mr: 3 },
+          width: 290,
+          minWidth: 290,
+          bgcolor: '#f5f5f5',
+          borderRadius: '4px 4px 0 0',
+          overflow: 'hidden',
+          outline: isOver ? '2px solid #1976d2' : 'none',
+          outlineOffset: -2
+        }}
+      >
+        <Box sx={{ 
+          px: 2, 
+          py: 1.5, 
+          bgcolor: 'white', 
+          borderBottom: '1px solid #e0e0e0', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
+              {stage.label}
+            </Typography>
+            <Chip 
+              label={stageDeals.length} 
+              size="small" 
+              sx={{ ml: 1, bgcolor: '#e0e0e0', color: '#757575', height: 20, fontSize: 12 }} 
+            />
+          </Box>
+          <IconButton size="small" sx={{ color: '#bdbdbd' }}>
+            <MoreHorizRounded fontSize="small" />
+          </IconButton>
+        </Box>
+        
+        <Box 
+          ref={drop} 
+          sx={{ 
+            flexGrow: 1, 
+            overflowY: 'auto', 
+            p: 1, 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 1
+          }}
+        >
           {stageDeals.length > 0 ? (
             stageDeals.map(deal => (
               <DealCard key={deal.id} deal={deal} />
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-neutral-300">
-              <InboxIcon className="h-6 w-6 mb-2" />
-              <p className="text-sm">No deals in this stage</p>
-              <button className="mt-2 text-primary text-sm hover:underline flex items-center">
-                <PlusIcon className="h-4 w-4 mr-1" /> Add deal
-              </button>
-            </div>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              py: 4, 
+              color: '#bdbdbd'
+            }}>
+              <InboxRounded sx={{ mb: 1, fontSize: 28 }} />
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                No deals in this stage
+              </Typography>
+              <Button 
+                startIcon={<AddRounded />} 
+                size="small" 
+                sx={{ 
+                  color: '#1976d2', 
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
+                }}
+              >
+                Add deal
+              </Button>
+            </Box>
           )}
-        </div>
-      </div>
+        </Box>
+      </Paper>
     );
   };
 
   return (
-    <main id="kanban-board" className="flex-grow flex flex-col overflow-hidden">
-      <div className="px-6 py-3 flex items-center justify-between bg-neutral-100">
-        <div className="flex items-center">
-          <h2 className="font-medium">Deals</h2>
-          <span className="ml-2 bg-neutral-300 text-white text-xs px-2 py-0.5 rounded-full">
-            {deals.length}
-          </span>
-        </div>
-        <div className="flex items-center">
-          <span className="text-sm text-neutral-300">
+    <Box 
+      component="main" 
+      id="kanban-board" 
+      sx={{ 
+        flexGrow: 1, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        overflow: 'hidden' 
+      }}
+    >
+      <Box sx={{ 
+        px: 3, 
+        py: 1.5, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        bgcolor: '#f5f5f5',
+        borderBottom: '1px solid #e0e0e0'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+            Deals
+          </Typography>
+          <Chip 
+            label={deals.length} 
+            size="small" 
+            sx={{ ml: 1, bgcolor: '#9e9e9e', color: 'white', height: 20 }} 
+          />
+        </Box>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Typography variant="body2" sx={{ color: '#9e9e9e' }}>
             Last updated: {lastUpdated || 'Never'}
-          </span>
-          <button 
-            className="ml-4 text-primary flex items-center text-sm hover:underline"
+          </Typography>
+          <Button
+            variant="text"
+            startIcon={isLoading ? <CircularProgress size={16} /> : <RefreshRounded />}
             onClick={onRefresh}
             disabled={isLoading}
+            sx={{ 
+              color: '#1976d2', 
+              textTransform: 'none',
+              '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
+            }}
           >
-            <RefreshCcwIcon className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} /> 
             {isLoading ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Box>
 
-      <div className="flex-grow overflow-x-auto overflow-y-hidden">
-        <div className="flex h-full" style={{ minWidth: 'fit-content' }}>
+      <Box sx={{ flexGrow: 1, overflowX: 'auto', overflowY: 'hidden' }}>
+        <Box sx={{ display: 'flex', height: '100%', minWidth: 'fit-content' }}>
           {stages.map(stage => (
             <StageColumn key={stage.id} stage={stage} />
           ))}
-        </div>
-      </div>
-    </main>
+        </Box>
+      </Box>
+    </Box>
   );
 }

@@ -1,6 +1,23 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PlusIcon, FilterIcon, SearchIcon, BellIcon, HelpCircleIcon } from "lucide-react";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  InputBase,
+  IconButton,
+  Avatar,
+  Box,
+  Stack,
+  InputAdornment,
+  TextField
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  FilterList as FilterIcon,
+  Search as SearchIcon,
+  Notifications as BellIcon,
+  HelpOutline as HelpIcon
+} from '@mui/icons-material';
 
 interface AppHeaderProps {
   onSearch: (query: string) => void;
@@ -8,41 +25,100 @@ interface AppHeaderProps {
 
 export default function AppHeader({ onSearch }: AppHeaderProps) {
   return (
-    <header className="bg-white border-b border-neutral-200 px-6 py-3 flex justify-between items-center">
-      <div className="flex items-center">
-        <h1 className="text-xl font-semibold text-neutral-400">Deal Pipeline</h1>
-        <div className="ml-6 flex">
-          <Button 
-            className="bg-primary hover:bg-blue-700 text-white px-4 py-1 rounded text-sm flex items-center h-9"
+    <AppBar 
+      position="static" 
+      color="transparent" 
+      elevation={0} 
+      sx={{ 
+        borderBottom: '1px solid', 
+        borderColor: 'divider', 
+        bgcolor: 'white'
+      }}
+    >
+      <Toolbar sx={{ px: 3, height: 64 }}>
+        <Typography 
+          variant="h6" 
+          component="h1" 
+          sx={{ 
+            fontWeight: 600, 
+            color: '#546e7a',
+            flexGrow: 0
+          }}
+        >
+          Deal Pipeline
+        </Typography>
+
+        <Stack direction="row" spacing={1.5} sx={{ ml: 4 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            size="small"
+            sx={{ textTransform: 'none' }}
           >
-            <PlusIcon className="h-4 w-4 mr-1" /> New Deal
+            New Deal
           </Button>
-          <Button 
-            variant="outline" 
-            className="ml-3 border border-neutral-300 hover:bg-neutral-100 px-4 py-1 rounded text-sm flex items-center h-9"
+          
+          <Button
+            variant="outlined"
+            color="inherit"
+            startIcon={<FilterIcon />}
+            size="small"
+            sx={{ 
+              textTransform: 'none',
+              borderColor: 'divider',
+              color: 'text.secondary'
+            }}
           >
-            <FilterIcon className="h-4 w-4 mr-1" /> Filter
+            Filter
           </Button>
-        </div>
-      </div>
-      <div className="flex items-center">
-        <div className="relative mr-4">
-          <SearchIcon className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-300" />
-          <Input 
-            type="text" 
-            placeholder="Search deals..." 
-            className="pl-8 pr-4 py-1 border border-neutral-200 rounded text-sm w-64"
-            onChange={(e) => onSearch(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center space-x-4">
-          <BellIcon className="h-5 w-5 text-neutral-300" />
-          <HelpCircleIcon className="h-5 w-5 text-neutral-300" />
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white">
+        </Stack>
+
+        <Box sx={{ flexGrow: 1 }} />
+
+        <TextField
+          size="small"
+          placeholder="Search deals..."
+          onChange={(e) => onSearch(e.target.value)}
+          sx={{ 
+            mr: 3,
+            width: 260,
+            '& .MuiOutlinedInput-root': {
+              borderColor: 'divider',
+              fontSize: 14
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+
+        <Stack direction="row" spacing={2} alignItems="center">
+          <IconButton size="small" sx={{ color: 'text.disabled' }}>
+            <BellIcon />
+          </IconButton>
+          
+          <IconButton size="small" sx={{ color: 'text.disabled' }}>
+            <HelpIcon />
+          </IconButton>
+          
+          <Avatar 
+            sx={{ 
+              width: 32, 
+              height: 32, 
+              bgcolor: 'primary.main', 
+              fontSize: 14,
+              fontWeight: 500
+            }}
+          >
             JD
-          </div>
-        </div>
-      </div>
-    </header>
+          </Avatar>
+        </Stack>
+      </Toolbar>
+    </AppBar>
   );
 }

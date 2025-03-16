@@ -1,7 +1,19 @@
 import { useDrag } from 'react-dnd';
 import { Deal } from '@shared/schema';
-import { Building2, User, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
+import { 
+  Paper, 
+  Box, 
+  Typography, 
+  Chip, 
+  Stack, 
+  Avatar 
+} from '@mui/material';
+import { 
+  BusinessRounded, 
+  PersonRounded, 
+  AttachMoneyRounded 
+} from '@mui/icons-material';
 
 interface DealCardProps {
   deal: Deal;
@@ -11,11 +23,11 @@ export default function DealCard({ deal }: DealCardProps) {
   const probabilityPercentage = deal.probability ? parseFloat(deal.probability) * 100 : 0;
   const formattedProbability = `${probabilityPercentage}%`;
   
-  const probabilityColor = () => {
-    if (probabilityPercentage >= 90) return 'bg-purple-100 text-purple-800';
-    if (probabilityPercentage >= 75) return 'bg-green-100 text-green-800';
-    if (probabilityPercentage >= 50) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-blue-100 text-primary';
+  const getProbabilityColor = () => {
+    if (probabilityPercentage >= 90) return { bg: '#f3e5f5', text: '#6a1b9a' };
+    if (probabilityPercentage >= 75) return { bg: '#e8f5e9', text: '#2e7d32' };
+    if (probabilityPercentage >= 50) return { bg: '#fff8e1', text: '#ff8f00' };
+    return { bg: '#e3f2fd', text: '#1976d2' };
   };
   
   const [{ isDragging }, drag] = useDrag(() => ({
@@ -42,39 +54,80 @@ export default function DealCard({ deal }: DealCardProps) {
       .toUpperCase();
   };
 
+  const probabilityStyle = getProbabilityColor();
+
   return (
-    <div 
+    <Paper
       ref={drag}
-      className={`deal-card bg-white rounded border border-neutral-200 p-3 hover:shadow-md cursor-grab transition-all
-                  ${isDragging ? 'opacity-60 rotate-2 shadow-lg' : ''}`}
+      elevation={isDragging ? 4 : 0}
+      sx={{
+        p: 1.5,
+        border: '1px solid #e0e0e0',
+        borderRadius: 1,
+        cursor: 'grab',
+        transition: 'all 0.2s ease',
+        '&:hover': { 
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)' 
+        },
+        opacity: isDragging ? 0.6 : 1,
+        transform: isDragging ? 'rotate(2deg)' : 'none',
+        bgcolor: 'white'
+      }}
       data-deal-id={deal.id}
     >
-      <div className="flex justify-between items-start">
-        <h4 className="font-medium text-sm">{deal.name}</h4>
-        <span className={`text-xs ${probabilityColor()} px-1.5 py-0.5 rounded`}>
-          {formattedProbability}
-        </span>
-      </div>
-      <div className="mt-2 text-xs text-neutral-300">
-        <div className="flex items-center">
-          <Building2 className="h-3 w-3 mr-1" />
-          <span>{deal.company || 'No company'}</span>
-        </div>
-        <div className="flex items-center mt-1">
-          <User className="h-3 w-3 mr-1" />
-          <span>{deal.contact || 'No contact'}</span>
-        </div>
-        <div className="flex items-center mt-1">
-          <DollarSign className="h-3 w-3 mr-1" />
-          <span>{deal.amount ? `$${deal.amount.toLocaleString()}` : 'No amount'}</span>
-        </div>
-      </div>
-      <div className="mt-3 flex justify-between items-center text-xs">
-        <span className="text-neutral-300">Updated: {formattedDate}</span>
-        <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-white text-xs">
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 500, fontSize: 14 }}>
+          {deal.name}
+        </Typography>
+        <Chip 
+          label={formattedProbability}
+          size="small"
+          sx={{ 
+            height: 20, 
+            fontSize: 10, 
+            bgcolor: probabilityStyle.bg, 
+            color: probabilityStyle.text,
+            fontWeight: 500
+          }}
+        />
+      </Box>
+      
+      <Stack spacing={0.5} sx={{ mt: 1, color: '#9e9e9e', fontSize: 12 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <BusinessRounded sx={{ fontSize: 14, mr: 0.5 }} />
+          <Typography variant="caption">{deal.company || 'No company'}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <PersonRounded sx={{ fontSize: 14, mr: 0.5 }} />
+          <Typography variant="caption">{deal.contact || 'No contact'}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <AttachMoneyRounded sx={{ fontSize: 14, mr: 0.5 }} />
+          <Typography variant="caption">
+            {deal.amount ? `$${deal.amount.toLocaleString()}` : 'No amount'}
+          </Typography>
+        </Box>
+      </Stack>
+      
+      <Box sx={{ 
+        mt: 1.5, 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        fontSize: 11
+      }}>
+        <Typography variant="caption" color="#9e9e9e">Updated: {formattedDate}</Typography>
+        <Avatar 
+          sx={{ 
+            width: 24, 
+            height: 24, 
+            fontSize: 11, 
+            bgcolor: '#5c6bc0' 
+          }}
+        >
           {getInitials()}
-        </div>
-      </div>
-    </div>
+        </Avatar>
+      </Box>
+    </Paper>
   );
 }
