@@ -21,7 +21,7 @@ import {
   FilterListRounded,
   Add as AddIcon
 } from '@mui/icons-material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AddDealForm } from '../components/AddDealForm';
 
 
