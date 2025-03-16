@@ -1,8 +1,18 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import axios from "axios";
-import { Deal, Pipeline, Stage } from "@shared/schema";
+import { Deal, Pipeline, Stage, insertUserSchema } from "@shared/schema";
+
+// Define authentication middleware
+const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  // Check if user is authenticated via session
+  if (req.session && req.session.user) {
+    return next();
+  }
+  
+  return res.status(401).json({ error: 'Authentication required' });
+};
 
 // Configure axios instance for HubSpot API
 const hubspotAPI = axios.create({
@@ -31,6 +41,87 @@ interface HubSpotErrorResponse {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Create default admin user if it doesn't exist
+  const adminUser = await storage.getUserByUsername('admin');
+  if (!adminUser) {
+    await storage.createUser({
+      username: 'admin',
+      password: 'admin', // In a real app, this would be hashed
+      name: 'Administrator',
+      role: 'admin'
+    });
+    console.log('Created default admin user');
+  }
+
+  // Authentication routes
+  app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required' });
+    }
+    
+    try {
+      // Get user by username
+      const user = await storage.getUserByUsername(username);
+      
+      // Check if user exists and password matches
+      if (!user || user.password !== password) {
+        return res.status(401).json({ message: 'Invalid username or password' });
+      }
+      
+      // Set user in session
+      if (req.session) {
+        req.session.user = {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.role
+        };
+      }
+      
+      // Return user info without password
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'An error occurred during login' });
+    }
+  });
+  
+  app.post('/api/logout', (req, res) => {
+    if (req.session) {
+      req.session.destroy(err => {
+        if (err) {
+          return res.status(500).json({ message: 'Failed to logout' });
+        }
+        res.json({ message: 'Logged out successfully' });
+      });
+    } else {
+      res.json({ message: 'Not logged in' });
+    }
+  });
+  
+  app.get('/api/me', isAuthenticated, async (req, res) => {
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    try {
+      const user = await storage.getUser(req.session.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Return user info without password
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Get user error:', error);
+      res.status(500).json({ message: 'An error occurred while fetching user data' });
+    }
+  });
+
   // Helper to format HubSpot errors
   const handleHubSpotError = (error: any) => {
     if (error.response?.data) {

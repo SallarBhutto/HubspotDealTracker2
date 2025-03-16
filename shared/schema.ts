@@ -36,11 +36,13 @@ export const stages = pgTable("stages", {
   metadata: jsonb("metadata")
 });
 
-// Auth - keeping users schema for future auth implementation
+// User authentication schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default("user"),
 });
 
 // Schema types
@@ -53,6 +55,8 @@ export type User = typeof users.$inferSelect;
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  name: true,
+  role: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
