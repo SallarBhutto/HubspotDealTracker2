@@ -42,6 +42,12 @@ export default function Home() {
 
   const [isAddDealOpen, setIsAddDealOpen] = useState(false);
 
+  useEffect(() => {
+    const handleOpenForm = () => setIsAddDealOpen(true);
+    window.addEventListener('openAddDealForm', handleOpenForm);
+    return () => window.removeEventListener('openAddDealForm', handleOpenForm);
+  }, []);
+
   // Return loading state
   if (isLoading && !deals?.length && !stages?.length) {
     return (

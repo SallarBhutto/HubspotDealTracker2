@@ -55,6 +55,7 @@ export default function AppHeader({ onSearch }: AppHeaderProps) {
             startIcon={<AddIcon />}
             size="small"
             sx={{ textTransform: 'none' }}
+            onClick={() => window.dispatchEvent(new CustomEvent('openAddDealForm'))}
           >
             New Deal
           </Button>

@@ -277,6 +277,7 @@ export default function KanbanBoard({
               <Button 
                 startIcon={<AddRounded />} 
                 size="small" 
+                onClick={() => window.dispatchEvent(new CustomEvent('openAddDealForm'))}
                 sx={{ 
                   color: '#1976d2', 
                   textTransform: 'none',
