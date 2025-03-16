@@ -171,6 +171,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/deals', isAuthenticated, async (req, res) => {
+    try {
+      const response = await hubspotAPI.post('/crm/v3/objects/deals', {
+        properties: {
+          dealname: req.body.name,
+          amount: req.body.amount,
+          pipeline: req.body.pipelineId,
+          dealstage: req.body.stageId
+        }
+      });
+      
+      const newDeal: Deal = {
+        id: response.data.id,
+        name: response.data.properties.dealname,
+        amount: response.data.properties.amount ? parseInt(response.data.properties.amount) : undefined,
+        stageId: response.data.properties.dealstage,
+        stageName: req.body.stageName,
+        pipelineId: response.data.properties.pipeline,
+        pipelineName: req.body.pipelineName,
+        probability: '',
+        company: response.data.properties.company,
+        contact: response.data.properties.contact,
+        lastUpdated: new Date(),
+        metadata: response.data
+      };
+
+      res.json(newDeal);
+    } catch (error) {
+      const formattedError = handleHubSpotError(error);
+      res.status(formattedError.status).json(formattedError);
+    }
+  });
+
   app.patch('/api/deals/:id/stage', isAuthenticated, async (req, res) => {
     const { id } = req.params;
     const { stageId } = req.body;

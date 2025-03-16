@@ -1,14 +1,14 @@
 import AppHeader from '@/components/AppHeader';
 import KanbanBoard from '@/components/KanbanBoard';
 import { useDealboard } from '@/hooks/useDealboard';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  CircularProgress, 
-  Select, 
-  MenuItem, 
-  FormControl, 
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
   InputLabel,
   Stack,
   Paper,
@@ -18,8 +18,12 @@ import {
 import {
   ErrorOutlineRounded,
   RefreshRounded,
-  FilterListRounded
+  FilterListRounded,
+  Add as AddIcon
 } from '@mui/icons-material';
+import { useState } from 'react';
+import { AddDealForm } from '../components/AddDealForm';
+
 
 export default function Home() {
   const {
@@ -35,6 +39,8 @@ export default function Home() {
     refreshData,
     lastUpdated
   } = useDealboard();
+
+  const [isAddDealOpen, setIsAddDealOpen] = useState(false);
 
   // Return loading state
   if (isLoading && !deals?.length && !stages?.length) {
@@ -64,10 +70,10 @@ export default function Home() {
           <Typography sx={{ mt: 1, color: 'text.disabled' }}>
             {error instanceof Error ? error.message : "Please check your connection and try again"}
           </Typography>
-          <Button 
+          <Button
             variant="contained"
             color="primary"
-            startIcon={<RefreshRounded />} 
+            startIcon={<RefreshRounded />}
             onClick={refreshData}
             sx={{ mt: 3 }}
           >
@@ -81,22 +87,27 @@ export default function Home() {
   // Find the currently selected pipeline name
   const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
 
+  //Filter stages to only include those belonging to the selected pipeline (Assuming stages are associated with pipelines)
+
+  const filteredStages = stages?.filter(stage => stage.pipelineId === selectedPipelineId) || [];
+
+
   // Return main UI
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: 'text.secondary' }}>
       <AppHeader onSearch={handleSearch} />
-      
+
       {/* Pipeline selector */}
-      <Paper 
+      <Paper
         elevation={0}
-        sx={{ 
-          bgcolor: 'white', 
-          borderBottom: '1px solid', 
+        sx={{
+          bgcolor: 'white',
+          borderBottom: '1px solid',
           borderColor: 'divider',
-          px: 3, 
-          py: 1.5, 
-          display: 'flex', 
-          alignItems: 'center' 
+          px: 3,
+          py: 1.5,
+          display: 'flex',
+          alignItems: 'center'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', mr: 4 }}>
@@ -108,9 +119,9 @@ export default function Home() {
               value={selectedPipelineId || ''}
               onChange={(e) => handlePipelineChange(e.target.value as string)}
               displayEmpty
-              sx={{ 
+              sx={{
                 bgcolor: 'white',
-                '.MuiOutlinedInput-notchedOutline': { 
+                '.MuiOutlinedInput-notchedOutline': {
                   borderColor: 'divider'
                 }
               }}
@@ -126,7 +137,7 @@ export default function Home() {
             </Select>
           </FormControl>
         </Box>
-        
+
         {/* Display total deal count for selected pipeline */}
         <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
           <FilterListRounded sx={{ fontSize: 16, mr: 1 }} />
@@ -135,10 +146,25 @@ export default function Home() {
           </Typography>
         </Box>
       </Paper>
-      
-      <KanbanBoard 
-        deals={deals || []} 
-        stages={stages || []} 
+
+      <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setIsAddDealOpen(true)}
+        >
+          Add Deal
+        </Button>
+      </Box>
+      <AddDealForm
+        open={isAddDealOpen}
+        onClose={() => setIsAddDealOpen(false)}
+        pipelines={pipelines}
+        stages={filteredStages}
+      />
+      <KanbanBoard
+        deals={deals || []}
+        stages={stages || []}
         isLoading={isLoading}
         onRefresh={refreshData}
         lastUpdated={lastUpdated}
