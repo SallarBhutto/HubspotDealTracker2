@@ -1,4 +1,3 @@
-import { useDrag } from 'react-dnd';
 import { Deal } from '@shared/schema';
 import { format } from 'date-fns';
 import { 
@@ -29,14 +28,6 @@ export default function DealCard({ deal }: DealCardProps) {
     if (probabilityPercentage >= 50) return { bg: '#fff8e1', text: '#ff8f00' };
     return { bg: '#e3f2fd', text: '#1976d2' };
   };
-  
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'DEAL',
-    item: { id: deal.id, currentStageId: deal.stageId },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  }));
 
   // Format lastUpdated date
   const formattedDate = deal.lastUpdated 
@@ -58,8 +49,7 @@ export default function DealCard({ deal }: DealCardProps) {
 
   return (
     <Paper
-      ref={drag}
-      elevation={isDragging ? 4 : 0}
+      elevation={0}
       sx={{
         p: 1.5,
         border: '1px solid #e0e0e0',
@@ -69,9 +59,9 @@ export default function DealCard({ deal }: DealCardProps) {
         '&:hover': { 
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)' 
         },
-        opacity: isDragging ? 0.6 : 1,
-        transform: isDragging ? 'rotate(2deg)' : 'none',
-        bgcolor: 'white'
+        bgcolor: 'white',
+        position: 'relative',
+        zIndex: 1
       }}
       data-deal-id={deal.id}
     >

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useDrop } from 'react-dnd';
+import { useState, useEffect, useRef } from 'react';
+import { useDrop, useDrag, XYCoord } from 'react-dnd';
 import { Deal, Stage } from '@shared/schema';
 import DealCard from './DealCard';
 import { RefreshRounded, InboxRounded, AddRounded, MoreHorizRounded } from '@mui/icons-material';
@@ -13,7 +13,8 @@ import {
   IconButton, 
   Paper, 
   Stack,
-  CircularProgress
+  CircularProgress,
+  Divider
 } from '@mui/material';
 
 interface KanbanBoardProps {
@@ -22,6 +23,14 @@ interface KanbanBoardProps {
   isLoading: boolean;
   onRefresh: () => void;
   lastUpdated: string | null;
+}
+
+// Interface for the drop result
+interface DropResult {
+  dealId: string;
+  targetStageId: string;
+  currentStageId: string;
+  index?: number;
 }
 
 export default function KanbanBoard({ 
@@ -56,22 +65,29 @@ export default function KanbanBoard({
     setGroupedDeals(grouped);
   }, [deals, stages]);
 
-  // Handle dropping a deal into a new stage
-  const handleDrop = async (dealId: string, targetStageId: string, currentStageId: string) => {
-    // Do nothing if dropping in the same stage
-    if (targetStageId === currentStageId) return;
+  // Handle dropping a deal into a new stage or position
+  const handleDrop = async (dealId: string, targetStageId: string, currentStageId: string, targetIndex?: number) => {
+    // If it's the same stage and no index is specified, do nothing
+    if (targetStageId === currentStageId && targetIndex === undefined) return;
 
     try {
       // Optimistically update UI
       setGroupedDeals(prev => {
         const newGrouped = { ...prev };
-        const dealToMove = newGrouped[currentStageId].find(d => d.id === dealId);
+        // Find the current stage's deals and the deal we're moving
+        const currentStageDeals = [...newGrouped[currentStageId]];
+        const currentIndex = currentStageDeals.findIndex(d => d.id === dealId);
         
-        if (dealToMove) {
-          // Remove from current stage
-          newGrouped[currentStageId] = newGrouped[currentStageId].filter(d => d.id !== dealId);
-          
-          // Add to new stage
+        if (currentIndex === -1) return prev; // Deal not found
+        
+        const dealToMove = currentStageDeals[currentIndex];
+        
+        // Remove from current stage
+        currentStageDeals.splice(currentIndex, 1);
+        newGrouped[currentStageId] = currentStageDeals;
+        
+        // If moving to a different stage
+        if (targetStageId !== currentStageId) {
           const stage = stages.find(s => s.id === targetStageId);
           if (stage) {
             const updatedDeal = { 
@@ -81,20 +97,44 @@ export default function KanbanBoard({
               probability: stage.probability,
               lastUpdated: new Date() 
             };
-            newGrouped[targetStageId] = [...newGrouped[targetStageId], updatedDeal];
+            
+            const targetStageDeals = [...newGrouped[targetStageId]];
+            
+            // Insert at specific position or end if no position specified
+            if (targetIndex !== undefined) {
+              targetStageDeals.splice(targetIndex, 0, updatedDeal);
+            } else {
+              targetStageDeals.push(updatedDeal);
+            }
+            
+            newGrouped[targetStageId] = targetStageDeals;
           }
+        } else {
+          // Reordering within the same stage
+          const targetStageDeals = [...newGrouped[targetStageId]];
+          
+          // Insert at new position
+          if (targetIndex !== undefined) {
+            targetStageDeals.splice(targetIndex, 0, dealToMove);
+          } else {
+            targetStageDeals.push(dealToMove);
+          }
+          
+          newGrouped[targetStageId] = targetStageDeals;
         }
         
         return newGrouped;
       });
 
-      // Make API request to update deal stage
-      await apiRequest('PATCH', `/api/deals/${dealId}/stage`, { stageId: targetStageId });
-      
-      toast({
-        title: "Deal moved",
-        description: "Deal has been moved to new stage successfully",
-      });
+      // Only make API request if changing stages
+      if (targetStageId !== currentStageId) {
+        await apiRequest('PATCH', `/api/deals/${dealId}/stage`, { stageId: targetStageId });
+        
+        toast({
+          title: "Deal moved",
+          description: "Deal has been moved to new stage successfully",
+        });
+      }
     } catch (error) {
       // Revert optimization on failure
       onRefresh();
@@ -107,17 +147,44 @@ export default function KanbanBoard({
     }
   };
 
+  // Deal drag preview component
+  const ItemDragPreview = ({ deal }: { deal: Deal }) => {
+    return (
+      <Box sx={{ 
+        p: 1.5,
+        border: '1px solid #e0e0e0',
+        borderRadius: 1,
+        bgcolor: 'white',
+        width: 280,
+        opacity: 0.8,
+        boxShadow: '0 5px 10px rgba(0,0,0,0.2)',
+      }}>
+        <Typography variant="subtitle2" noWrap>
+          {deal.name}
+        </Typography>
+      </Box>
+    );
+  };
+
   // StageColumn component to render each stage
   const StageColumn = ({ stage }: { stage: Stage }) => {
     const stageDeals = groupedDeals[stage.id] || [];
     
-    const [{ isOver }, drop] = useDrop(() => ({
+    // Drop handler for the column itself
+    const [{ isOver, canDrop }, drop] = useDrop(() => ({
       accept: 'DEAL',
-      drop: (item: { id: string, currentStageId: string }) => {
+      drop: (item: { id: string, currentStageId: string, originalIndex: number }, monitor) => {
+        const didDrop = monitor.didDrop();
+        if (didDrop) {
+          return;
+        }
+        
+        // If dropped directly on the column (not a card), add to the end
         handleDrop(item.id, stage.id, item.currentStageId);
       },
       collect: monitor => ({
-        isOver: !!monitor.isOver(),
+        isOver: !!monitor.isOver({ shallow: true }),
+        canDrop: !!monitor.canDrop(),
       }),
     }));
     
@@ -135,7 +202,7 @@ export default function KanbanBoard({
           bgcolor: '#f5f5f5',
           borderRadius: '4px 4px 0 0',
           overflow: 'hidden',
-          outline: isOver ? '2px solid #1976d2' : 'none',
+          outline: isOver && canDrop ? '2px solid #1976d2' : 'none',
           outlineOffset: -2
         }}
       >
@@ -175,9 +242,25 @@ export default function KanbanBoard({
           }}
         >
           {stageDeals.length > 0 ? (
-            stageDeals.map(deal => (
-              <DealCard key={deal.id} deal={deal} />
-            ))
+            <>
+              {stageDeals.map((deal, index) => (
+                <DealItem 
+                  key={deal.id}
+                  deal={deal}
+                  index={index}
+                  stageId={stage.id}
+                  moveCard={handleDrop}
+                />
+              ))}
+              {/* Empty drop target at the end of the list */}
+              <EmptyDropTarget 
+                stageId={stage.id}
+                index={stageDeals.length}
+                onDrop={(dealId, sourceStageId) => 
+                  handleDrop(dealId, stage.id, sourceStageId, stageDeals.length)
+                }
+              />
+            </>
           ) : (
             <Box sx={{ 
               display: 'flex', 
@@ -206,6 +289,105 @@ export default function KanbanBoard({
           )}
         </Box>
       </Paper>
+    );
+  };
+
+  // Component for individual deals with drop zones
+  const DealItem = ({ 
+    deal, 
+    index, 
+    stageId, 
+    moveCard 
+  }: { 
+    deal: Deal; 
+    index: number; 
+    stageId: string;
+    moveCard: (dealId: string, targetStageId: string, sourceStageId: string, targetIndex?: number) => void;
+  }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    
+    const [{ isOver, canDrop }, drop] = useDrop({
+      accept: 'DEAL',
+      canDrop: (item) => item.id !== deal.id,
+      drop: (item: { id: string, currentStageId: string }) => {
+        if (item.id !== deal.id) {
+          moveCard(item.id, stageId, item.currentStageId, index);
+        }
+      },
+      collect: monitor => ({
+        isOver: !!monitor.isOver(),
+        canDrop: !!monitor.canDrop() && monitor.getItem().id !== deal.id,
+      }),
+    });
+    
+    const [{ isDragging }, drag] = useDrag({
+      type: 'DEAL',
+      item: { id: deal.id, currentStageId: stageId, index },
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
+    });
+    
+    // Apply the drag and drop refs
+    drop(drag(ref));
+    
+    return (
+      <Box sx={{ position: 'relative' }}>
+        {/* Drop indicator */}
+        {isOver && canDrop && (
+          <Box 
+            sx={{
+              position: 'absolute',
+              top: -4,
+              left: 0,
+              right: 0,
+              height: 4,
+              bgcolor: 'primary.main',
+              zIndex: 10,
+              borderRadius: '2px',
+            }} 
+          />
+        )}
+        <Box ref={ref}>
+          <DealCard deal={deal} />
+        </Box>
+      </Box>
+    );
+  };
+  
+  // Empty drop target component to handle drops between cards
+  const EmptyDropTarget = ({ 
+    stageId, 
+    index, 
+    onDrop 
+  }: { 
+    stageId: string; 
+    index: number;
+    onDrop: (dealId: string, sourceStageId: string) => void;
+  }) => {
+    const [{ isOver, canDrop }, drop] = useDrop({
+      accept: 'DEAL',
+      drop: (item: { id: string, currentStageId: string }) => {
+        onDrop(item.id, item.currentStageId);
+        return { dropped: true };
+      },
+      collect: monitor => ({
+        isOver: !!monitor.isOver(),
+        canDrop: !!monitor.canDrop(),
+      }),
+    });
+    
+    return (
+      <Box 
+        ref={drop}
+        sx={{ 
+          height: isOver && canDrop ? 100 : 20, 
+          transition: 'height 0.2s ease',
+          border: isOver && canDrop ? '2px dashed #1976d2' : 'none',
+          borderRadius: 1,
+          mb: 1,
+        }}
+      />
     );
   };
 
