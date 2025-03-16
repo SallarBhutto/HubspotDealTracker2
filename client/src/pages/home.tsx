@@ -153,15 +153,7 @@ export default function Home() {
         </Box>
       </Paper>
 
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setIsAddDealOpen(true)}
-        >
-          Add Deal
-        </Button>
-      </Box>
+      
       <AddDealForm
         open={isAddDealOpen}
         onClose={() => setIsAddDealOpen(false)}
