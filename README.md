@@ -44,8 +44,13 @@ A full-stack application that provides a Kanban board interface for managing Hub
 
 ## Getting Started
 
-1. The project is set up to run both frontend and backend concurrently.
-2. Run the development server:
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. The project is set up to run both frontend and backend concurrently.
+3. Run the development server:
    ```bash
    npm run dev
    ```
