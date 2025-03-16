@@ -1,12 +1,7 @@
-import 'express-session';
+import { User } from '../shared/schema';
 
 declare module 'express-session' {
   interface SessionData {
-    user?: {
-      id: number;
-      username: string;
-      name: string;
-      role: string;
-    };
+    user?: User;
   }
 }

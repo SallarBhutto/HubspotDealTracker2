@@ -1,173 +1,157 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { 
-  Box, 
-  Paper, 
-  Typography, 
-  TextField, 
-  Button, 
+import { useAuth } from '@/hooks/useAuth.tsx';
+import {
+  Box,
+  Button,
   Container,
-  InputAdornment,
-  IconButton,
+  TextField,
+  Typography,
+  Paper,
+  Grid,
+  CircularProgress,
   Alert,
-  Stack,
-  Divider
 } from '@mui/material';
-import { Visibility, VisibilityOff, LockOutlined } from '@mui/icons-material';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
 
 export default function Login() {
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
+  const { login, isLoading, error, user, clearError } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Redirect to home if already logged in
+  if (user) {
+    setLocation('/');
+    return null;
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!username || !password) {
-      setError('Please enter both username and password');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
+    if (!username || !password) return;
+
     try {
-      const response = await apiRequest('POST', '/api/login', { username, password });
-      
-      toast({
-        title: 'Login successful',
-        description: 'Welcome to HubSpot Deal Pipeline',
-      });
-      
-      // Redirect to dashboard
+      await login(username, password);
       setLocation('/');
-    } catch (error) {
-      console.error('Login error:', error);
-      setError('Invalid username or password');
-      toast({
-        title: 'Login failed',
-        description: 'Please check your credentials and try again',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      // Error is handled in the login function
     }
   };
 
   return (
-    <Box 
-      sx={{ 
-        height: '100vh', 
-        display: 'flex', 
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: '#f5f8fa'
-      }}
-    >
-      <Container maxWidth="sm">
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: 4, 
-            borderRadius: 2,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-          }}
-        >
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
-            <Box 
-              sx={{ 
-                width: 60, 
-                height: 60, 
-                borderRadius: '50%', 
-                bgcolor: 'primary.main', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                mb: 2
+    <Container component="main" maxWidth="lg">
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          p: 4,
+        }}
+      >
+        <Grid container spacing={4} sx={{ boxShadow: 1, borderRadius: 2, overflow: 'hidden' }}>
+          {/* Login Form */}
+          <Grid item xs={12} md={5} component={Paper} square sx={{ p: 4 }}>
+            <Box
+              sx={{
+                my: 8,
+                mx: 4,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
               }}
             >
-              <LockOutlined sx={{ color: 'white', fontSize: 30 }} />
+              <Typography component="h1" variant="h4" fontWeight={600} mb={4}>
+                Welcome Back
+              </Typography>
+
+              {error && (
+                <Alert severity="error" onClose={clearError} sx={{ mb: 3, width: '100%' }}>
+                  {error.message}
+                </Alert>
+              )}
+
+              <Box component="form" noValidate onSubmit={handleLogin} sx={{ mt: 1, width: '100%' }}>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="username"
+                  label="Username"
+                  name="username"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={isLoading}
+                  autoFocus
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type="password"
+                  id="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                />
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  sx={{ mt: 3, mb: 2, p: 1 }}
+                  disabled={isLoading}
+                >
+                  {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+                </Button>
+              </Box>
             </Box>
-            <Typography variant="h5" component="h1" fontWeight={600}>
-              HubSpot Deal Pipeline
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mt={1}>
-              Sign in to access your deal management dashboard
-            </Typography>
-          </Box>
+          </Grid>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <Stack spacing={3}>
-              <TextField
-                fullWidth
-                label="Username"
-                variant="outlined"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                placeholder="Enter your username"
-              />
-              
-              <TextField
-                fullWidth
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                variant="outlined"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                placeholder="Enter your password"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              
-              <Button
-                fullWidth
-                variant="contained"
-                color="primary"
-                size="large"
-                type="submit"
-                disabled={isLoading}
-                sx={{ 
-                  mt: 3,
-                  py: 1.5,
-                  fontWeight: 600
-                }}
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </Stack>
-          </form>
-          
-          <Box mt={3}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
-              Default credentials: username: admin, password: admin
-            </Typography>
-          </Box>
-        </Paper>
-      </Container>
-    </Box>
+          {/* Hero Section */}
+          <Grid
+            item
+            xs={12}
+            md={7}
+            sx={{
+              background: 'linear-gradient(to right bottom, #1976d2, #42a5f5)',
+              color: 'white',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 4,
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                maxWidth: '500px',
+                p: 3,
+              }}
+            >
+              <Typography component="h1" variant="h3" fontWeight={700} mb={3}>
+                HubSpot Deal Kanban Board
+              </Typography>
+              <Typography variant="h6" paragraph>
+                Manage your HubSpot deals with an intuitive drag-and-drop interface
+              </Typography>
+              <Typography paragraph>
+                Visualize your sales pipeline, track progress, and move deals through
+                stages with a simple drag-and-drop interface.
+              </Typography>
+              <Typography paragraph>
+                Gain insights into your pipeline health, identify bottlenecks, and take action
+                to close deals faster.
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+    </Container>
   );
 }

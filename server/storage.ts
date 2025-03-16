@@ -1,6 +1,11 @@
 import { users, type User, type InsertUser, type Deal, type Pipeline, type Stage } from "@shared/schema";
 
 // Storage interface for all data operations
+import session from "express-session";
+import createMemoryStore from "memorystore";
+
+const MemoryStore = createMemoryStore(session);
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -19,6 +24,9 @@ export interface IStorage {
   // HubSpot stage operations
   getStages(pipelineId: string): Promise<Stage[]>;
   getStageById(id: string): Promise<Stage | undefined>;
+  
+  // Session store
+  sessionStore: session.Store;
 }
 
 // In-memory storage implementation
@@ -29,12 +37,17 @@ export class MemStorage implements IStorage {
   private stages: Map<string, Stage>;
   currentId: number;
 
+  sessionStore: session.Store;
+
   constructor() {
     this.users = new Map();
     this.deals = new Map();
     this.pipelines = new Map();
     this.stages = new Map();
     this.currentId = 1;
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
   }
 
   // User methods
